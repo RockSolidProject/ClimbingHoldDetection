@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!--This file is only for testing before we set up our app, and its mostly ai generated-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Image Upload</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #mainWrapper {
+            display: flex;
+            flex-direction: row;
+            width: 100vw;
+            height: 100vh;
+        }
+        .half {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f0f0;
+            box-sizing: border-box;
+            width: 100%;
+            height: auto;
+        }
+        #canvasWrapper, #annotatedWrapper {
+            position: relative;
+            display: inline-block;
+            /* Remove max-width/max-height for strict sizing */
+        }
+        #uploadedImage, #resultCanvas, #annotatedImage, #annotatedCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        #uploadedImage, #annotatedImage {
+            z-index: 1;
+        }
+        #resultCanvas, #annotatedCanvas {
+            z-index: 2;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h2 style="text-align:center;">Detect holds</h2>
+    <form id="uploadForm" enctype="multipart/form-data" method="post" action="http://localhost:8000/detect-holds" style="text-align:center;">
+        <input type="file" name="file" id="fileInput" accept="image/*" required>
+    </form>
+    <div id="mainWrapper">
+        <div class="half">
+            <div id="canvasWrapper" style="display:none;">
+                <img id="uploadedImage" src="" alt="Uploaded" />
+                <canvas id="resultCanvas"></canvas>
+            </div>
+        </div>
+        <div class="half">
+            <div id="annotatedWrapper" style="display:none;">
+                <img id="annotatedImage" src="" alt="Annotated" />
+                <canvas id="annotatedCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const uploadedImage = document.getElementById('uploadedImage');
+    const resultCanvas = document.getElementById('resultCanvas');
+    const canvasWrapper = document.getElementById('canvasWrapper');
+    const annotatedImage = document.getElementById('annotatedImage');
+    const annotatedCanvas = document.getElementById('annotatedCanvas');
+    const annotatedWrapper = document.getElementById('annotatedWrapper');
+    const uploadForm = document.getElementById('uploadForm');
+    let imageLoaded = false;
+
+    function setBothWrappersSize(width, height) {
+        canvasWrapper.style.width = width + "px";
+        canvasWrapper.style.height = height + "px";
+        annotatedWrapper.style.width = width + "px";
+        annotatedWrapper.style.height = height + "px";
+    }
+
+    fileInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            uploadedImage.src = evt.target.result;
+            annotatedImage.src = evt.target.result;
+            uploadedImage.onload = function() {
+                setBothWrappersSize(uploadedImage.naturalWidth, uploadedImage.naturalHeight);
+                resultCanvas.width = uploadedImage.naturalWidth;
+                resultCanvas.height = uploadedImage.naturalHeight;
+                annotatedCanvas.width = uploadedImage.naturalWidth;
+                annotatedCanvas.height = uploadedImage.naturalHeight;
+                canvasWrapper.style.display = "inline-block";
+                annotatedWrapper.style.display = "none";
+                const ctx = resultCanvas.getContext('2d');
+                ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+                imageLoaded = true;
+                uploadForm.requestSubmit();
+            };
+        };
+        reader.readAsDataURL(file);
+    };
+
+    uploadForm.onsubmit = async function(e) {
+        e.preventDefault();
+        if (!imageLoaded) {
+            alert("Please select an image first.");
+            return;
+        }
+        const formData = new FormData(this);
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        console.log("Response:", JSON.stringify(result, null, 2));
+
+        annotatedWrapper.style.display = "inline-block";
+        const ctx = annotatedCanvas.getContext('2d');
+        ctx.clearRect(0, 0, annotatedCanvas.width, annotatedCanvas.height);
+        if (result.holds) {
+            for (const hold of result.holds) {
+                ctx.beginPath();
+                ctx.arc(hold.position[0], hold.position[1], 8, 0, 2 * Math.PI);
+                ctx.fillStyle = hold.is_selected ? "green" : "red";
+                ctx.fill();
+                ctx.strokeStyle = "#000";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+    };
+</script>
+</body>
+</html>

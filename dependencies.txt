@@ -1,0 +1,2 @@
+We need to create some dependency managment probably with conda i only have flask right now so the one that will crete the net should create conda config
+* flask
