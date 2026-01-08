@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-from db_utils import save_results, load_result, get_stored_image_hashes
+from db_utils import save_results, load_result, get_stored_image_hashes, load_result_by_hash
 import detect
 
 app = Flask(__name__)
@@ -30,6 +30,20 @@ def detect_holds():
         print("Loaded cached result.")
 
     return jsonify(result)
+
+@app.route("/stored-hashes", methods=['GET'])
+def stored_hashes():
+    hashes = get_stored_image_hashes()
+    return jsonify({"hashes": hashes})
+
+@app.route("/result-by-hash/<image_hash>", methods=['GET'])
+def result_by_hash(image_hash):
+    result = load_result_by_hash(image_hash)
+    if result is None:
+        return jsonify({"error": "No result found for this hash"}), 404
+    return jsonify(result)
+
+
 
 def test_images(filename, image):
     """SAVES THE IMAGE TO TEST IF SUCESUFULLY UPLOADED"""
