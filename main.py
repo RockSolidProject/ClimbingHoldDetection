@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template
+from db_utils import save_results, load_result, get_stored_image_hashes
 import detect
 
 app = Flask(__name__)
@@ -20,7 +21,13 @@ def detect_holds():
     image = file.read()
     test_images(file.filename, image)
 
-    result = detect.detect_holds(image)
+    result = load_result(image)
+    if result is None:
+        print("No cached result, running detection...")
+        result = detect.detect_holds(image)
+        save_results(image, result)
+    else:
+        print("Loaded cached result.")
 
     return jsonify(result)
 
