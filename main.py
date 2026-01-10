@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
+
+import detection
 from db_utils import save_results, load_result, get_stored_image_hashes, load_result_by_hash
-import detect
 
 app = Flask(__name__)
 
@@ -15,6 +16,7 @@ def hello():
 
 @app.route("/detect-holds", methods=['POST'])
 def detect_holds():
+    import base64
     file = request.files.get("file", None)
     if file is None:
         return jsonify({"error": "No file provided"}), 400
@@ -24,11 +26,15 @@ def detect_holds():
     result = load_result(image)
     if result is None:
         print("No cached result, running detection...")
-        result = detect.detect_holds(image)
+        result = detection.detect_holds(image)
         save_results(image, result)
     else:
         print("Loaded cached result.")
 
+    annotated_img_b64 = None
+    if result.get("annotated_image"):
+        annotated_img_b64 = base64.b64encode(result["annotated_image"]).decode('utf-8')
+        result["annotated_image"] = annotated_img_b64
     return jsonify(result)
 
 @app.route("/stored-hashes", methods=['GET'])
@@ -54,4 +60,4 @@ def test_images(filename, image):
         f.write(image)
 
 if __name__ == "__main__":
-    app.run(debug=True, host="localhost", port=8000)
+    app.run(debug=True, host="localhost", port=5000)

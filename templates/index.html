@@ -49,7 +49,7 @@
 </head>
 <body>
     <h2 style="text-align:center;">Detect holds</h2>
-    <form id="uploadForm" enctype="multipart/form-data" method="post" action="http://localhost:8000/detect-holds" style="text-align:center;">
+    <form id="uploadForm" enctype="multipart/form-data" method="post" action="http://localhost:5000/detect-holds" style="text-align:center;">
         <input type="file" name="file" id="fileInput" accept="image/*" required>
     </form>
     <div id="mainWrapper">
@@ -122,18 +122,25 @@
         const result = await response.json();
         console.log("Response:", JSON.stringify(result, null, 2));
 
-        annotatedWrapper.style.display = "inline-block";
-        const ctx = annotatedCanvas.getContext('2d');
-        ctx.clearRect(0, 0, annotatedCanvas.width, annotatedCanvas.height);
-        if (result.holds) {
-            for (const hold of result.holds) {
-                ctx.beginPath();
-                ctx.arc(hold.position[0], hold.position[1], 8, 0, 2 * Math.PI);
-                ctx.fillStyle = hold.is_selected ? "green" : "red";
-                ctx.fill();
-                ctx.strokeStyle = "#000";
-                ctx.lineWidth = 2;
-                ctx.stroke();
+        if (result.annotated_image) {
+            annotatedImage.src = 'data:image/jpeg;base64,' + result.annotated_image;
+            annotatedWrapper.style.display = "inline-block";
+            const ctx = annotatedCanvas.getContext('2d');
+            ctx.clearRect(0, 0, annotatedCanvas.width, annotatedCanvas.height);
+        } else {
+            annotatedWrapper.style.display = "inline-block";
+            const ctx = annotatedCanvas.getContext('2d');
+            ctx.clearRect(0, 0, annotatedCanvas.width, annotatedCanvas.height);
+            if (result.holds) {
+                for (const hold of result.holds) {
+                    ctx.beginPath();
+                    ctx.arc(hold.position[0], hold.position[1], 8, 0, 2 * Math.PI);
+                    ctx.fillStyle = hold.is_selected ? "green" : "red";
+                    ctx.fill();
+                    ctx.strokeStyle = "#000";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
             }
         }
     };

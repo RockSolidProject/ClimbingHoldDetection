@@ -1,0 +1,24 @@
+name: climbing-holds
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+
+dependencies:
+  - python=3.10
+  - pip
+  - numpy=1.26
+  - opencv
+  - pillow
+  - matplotlib
+  - tqdm
+  - pyyaml
+  - pybind11
+
+  - pytorch
+  - torchvision
+  - pytorch-cuda=11.8
+
+  - pip:
+      - ultralytics
+      - flask
