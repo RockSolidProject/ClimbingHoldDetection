@@ -10,7 +10,7 @@ PORT = 5000
 @app.route("/", methods=['GET'])
 def testing_page():
     """Simple testing page"""
-    return render_template("index.html", detect=f"https://{HOST}:{PORT}/detect-holds")
+    return render_template("index.html", detect_path=f"http://{HOST}:{PORT}/detect-holds")
 
 @app.route("/hello", methods=['GET'])
 def hello():
@@ -51,4 +51,4 @@ def result_by_hash(image_hash):
     return jsonify(result)
 
 if __name__ == "__main__":
-    app.run(debug=True, host=HOST, port=PORT, ssl_context=('https/certificate.pem', 'https/key.pem'))
+    app.run(debug=True, host=HOST, port=PORT)
