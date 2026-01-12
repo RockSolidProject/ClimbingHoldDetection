@@ -18,7 +18,6 @@ def hello():
 
 @app.route("/detect-holds", methods=['POST'])
 def detect_holds():
-    import base64
     file = request.files.get("file", None)
     if file is None:
         return jsonify({"error": "No file provided"}), 400
@@ -32,10 +31,6 @@ def detect_holds():
     else:
         print("Loaded cached result.")
 
-    annotated_img_b64 = None
-    if result.get("annotated_image"):
-        annotated_img_b64 = base64.b64encode(result["annotated_image"]).decode('utf-8')
-        result["annotated_image"] = annotated_img_b64
     return jsonify(result)
 
 @app.route("/stored-hashes", methods=['GET'])
