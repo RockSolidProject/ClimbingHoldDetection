@@ -4,11 +4,13 @@ import detection
 from db_utils import save_results, load_result, get_stored_image_hashes, load_result_by_hash
 
 app = Flask(__name__)
+HOST = "localhost"
+PORT = 5000
 
 @app.route("/", methods=['GET'])
 def testing_page():
     """Simple testing page"""
-    return render_template("index.html")
+    return render_template("index.html", detect=f"https://{HOST}:{PORT}/detect-holds")
 
 @app.route("/hello", methods=['GET'])
 def hello():
@@ -21,7 +23,6 @@ def detect_holds():
     if file is None:
         return jsonify({"error": "No file provided"}), 400
     image = file.read()
-    test_images(file.filename, image)
 
     result = load_result(image)
     if result is None:
@@ -49,15 +50,5 @@ def result_by_hash(image_hash):
         return jsonify({"error": "No result found for this hash"}), 404
     return jsonify(result)
 
-
-
-def test_images(filename, image):
-    """SAVES THE IMAGE TO TEST IF SUCESUFULLY UPLOADED"""
-    import os
-    save_path = os.path.join("uploads", filename)
-    os.makedirs("uploads", exist_ok=True)
-    with open(save_path, "wb") as f:
-        f.write(image)
-
 if __name__ == "__main__":
-    app.run(debug=True, host="localhost", port=5000)
+    app.run(debug=True, host=HOST, port=PORT, ssl_context=('https/certificate.pem', 'https/key.pem'))
