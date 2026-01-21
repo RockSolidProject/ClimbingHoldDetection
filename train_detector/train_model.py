@@ -5,7 +5,7 @@ import sys
 
 
 def main():
-    print("=== YOLOv8 TRAINING ===")
+    print("YOLOv8 TRAINING")
     print("Torch version:", torch.__version__)
     print("CUDA available:", torch.cuda.is_available())
 

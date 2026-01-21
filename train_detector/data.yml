@@ -1,8 +1,8 @@
-path: C:/Users/urban/PycharmProjects/ClimbingHoldDetection/train_images
+path: train_images/
 
 train: train/images
 val: valid/images
-
+test: test2/images
 nc: 1
 
 names:
