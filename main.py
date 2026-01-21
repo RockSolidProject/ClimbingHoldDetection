@@ -18,6 +18,10 @@ def testing_page():
     """Simple testing page"""
     return render_template("index.html", detect_path=f"http://{HOST}:{PORT}/detect-holds")
 
+@app.route("/map", methods=['GET'])
+def map_page():
+    return render_template("maribor_map.html", coverage_path=f"http://{HOST}:{PORT}/get-coverage")
+
 @app.route("/hello", methods=['GET'])
 def hello():
     return "Hello, World!"
@@ -78,8 +82,26 @@ def result_by_hash(image_hash):
         return jsonify({"error": "No result found for this hash"}), 404
     return jsonify(result)
 
-# @app.route("/get-coverage")
+@app.route("/get-coverage", methods=['GET'])
+def get_coverage():
+    latitude = request.args.get("latitude", type=float)
+    longitude = request.args.get("longitude", type=float)
+    if latitude is None or longitude is None:
+        return jsonify({"error": "No latitude and longitude provided"}), 400
 
+    data = load_locations()
+    lat, lon = truncate_coords(latitude, longitude)
+    key = f"{lat},{lon}"
+    if key not in data:
+        return jsonify({"error": "No data found for this location"}), 404
+    entry = data[key]
+    return jsonify({
+        "latitude": entry["latitude"],
+        "longitude": entry["longitude"],
+        "average_coverage": entry["average_coverage"],
+        "count": entry["count"],
+        "coverages": entry["coverages"]
+    })
 
 
 

@@ -28,7 +28,6 @@
         #canvasWrapper, #annotatedWrapper {
             position: relative;
             display: inline-block;
-            /* Remove max-width/max-height for strict sizing */
         }
         #uploadedImage, #resultCanvas, #annotatedImage, #annotatedCanvas {
             position: absolute;
@@ -45,13 +44,35 @@
             z-index: 2;
             pointer-events: none;
         }
+        .location-inputs {
+            margin: 10px 0;
+        }
+        .location-inputs input {
+            padding: 5px;
+            margin: 0 5px;
+            width: 120px;
+        }
+        .location-inputs button {
+            padding: 5px 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <h2 style="text-align:center;">Detect holds</h2>
     <form id="uploadForm" enctype="multipart/form-data" method="post" action="{{ detect_path }}" style="text-align:center;">
         <input type="file" name="file" id="fileInput" accept="image/*" required>
+        <div class="location-inputs">
+            <label>Latitude: <input type="number" name="latitude" id="latitudeInput" step="any" placeholder="e.g. 46.5547"></label>
+            <label>Longitude: <input type="number" name="longitude" id="longitudeInput" step="any" placeholder="e.g. 15.6459"></label>
+            <button type="button" id="getLocationBtn">Get My Location</button>
+        </div>
     </form>
+    <div style="text-align:center; margin-top: 10px;">
+        <button onclick="window.location.href='/map'" style="padding: 10px 20px; font-size: 1em; cursor: pointer;">
+            View Coverage Map
+        </button>
+    </div>
     <div id="mainWrapper">
         <div class="half">
             <div id="canvasWrapper" style="display:none;">
@@ -75,7 +96,29 @@
     const annotatedCanvas = document.getElementById('annotatedCanvas');
     const annotatedWrapper = document.getElementById('annotatedWrapper');
     const uploadForm = document.getElementById('uploadForm');
+    const latitudeInput = document.getElementById('latitudeInput');
+    const longitudeInput = document.getElementById('longitudeInput');
+    const getLocationBtn = document.getElementById('getLocationBtn');
     let imageLoaded = false;
+
+    getLocationBtn.onclick = function() {
+        if (navigator.geolocation) {
+            getLocationBtn.textContent = 'Getting location...';
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    latitudeInput.value = position.coords.latitude.toFixed(6);
+                    longitudeInput.value = position.coords.longitude.toFixed(6);
+                    getLocationBtn.textContent = 'Get My Location';
+                },
+                function(error) {
+                    alert('Unable to get location: ' + error.message);
+                    getLocationBtn.textContent = 'Get My Location';
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by your browser.');
+        }
+    };
 
     function setBothWrappersSize(width, height) {
         canvasWrapper.style.width = width + "px";
