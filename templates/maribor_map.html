@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maribor Map Location Picker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map { height: 80vh; width: 100%; }
+        #coords { font-size: 1.2em; margin: 10px; }
+        #coverage { font-size: 1.2em; margin: 10px; color: #333; }
+        .back-btn { margin: 10px; padding: 10px 20px; font-size: 1em; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Pick a Location in Maribor</h2>
+    <button class="back-btn" onclick="window.location.href='/'">Back to Detection</button>
+    <div id="coords">Click on the map to get coordinates.</div>
+    <div id="coverage"></div>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        var mariborLat = 46.5547;
+        var mariborLng = 15.6459;
+        var map = L.map('map').setView([mariborLat, mariborLng], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        var marker;
+        map.on('click', async function(e) {
+            var lat = e.latlng.lat.toFixed(6);
+            var lng = e.latlng.lng.toFixed(6);
+            document.getElementById('coords').textContent = `Latitude: ${lat}, Longitude: ${lng}`;
+
+            if (marker) {
+                marker.setLatLng(e.latlng);
+            } else {
+                marker = L.marker(e.latlng).addTo(map);
+            }
+
+            // Fetch coverage data
+            document.getElementById('coverage').textContent = 'Loading coverage data...';
+            try {
+                const response = await fetch(`/get-coverage?latitude=${lat}&longitude=${lng}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    document.getElementById('coverage').textContent = 'No coverage data for this location.';
+                } else {
+                    document.getElementById('coverage').innerHTML = `
+                        <strong>Average Coverage:</strong> ${(data.average_coverage * 100).toFixed(2)}%<br>
+                        <strong>Number of Inputs:</strong> ${data.count}<br>
+                        <strong>Coverages:</strong> ${data.coverages.map(c => (c * 100).toFixed(2) + '%').join(', ')}
+                    `;
+                }
+            } catch (err) {
+                document.getElementById('coverage').textContent = 'Error fetching coverage data.';
+            }
+        });
+    </script>
+</body>
+</html>

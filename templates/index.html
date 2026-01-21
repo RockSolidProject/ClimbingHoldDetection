@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Test Image Upload</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
         body {
             margin: 0;
@@ -28,7 +29,6 @@
         #canvasWrapper, #annotatedWrapper {
             position: relative;
             display: inline-block;
-            /* Remove max-width/max-height for strict sizing */
         }
         #uploadedImage, #resultCanvas, #annotatedImage, #annotatedCanvas {
             position: absolute;
@@ -45,13 +45,87 @@
             z-index: 2;
             pointer-events: none;
         }
+        .location-inputs {
+            margin: 10px 0;
+        }
+        .location-inputs input {
+            padding: 5px;
+            margin: 0 5px;
+            width: 120px;
+        }
+        .location-inputs button {
+            padding: 5px 10px;
+            cursor: pointer;
+            margin: 2px;
+        }
+        #locationMapModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        #locationMapContainer {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 800px;
+        }
+        #locationPickerMap {
+            height: 400px;
+            width: 100%;
+        }
+        #mapCoords {
+            margin: 10px 0;
+            font-size: 1em;
+        }
+        .modal-buttons {
+            margin-top: 10px;
+            text-align: right;
+        }
+        .modal-buttons button {
+            padding: 8px 16px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <h2 style="text-align:center;">Detect holds</h2>
     <form id="uploadForm" enctype="multipart/form-data" method="post" action="{{ detect_path }}" style="text-align:center;">
         <input type="file" name="file" id="fileInput" accept="image/*" required>
+        <div class="location-inputs">
+            <label>Latitude: <input type="number" name="latitude" id="latitudeInput" step="any" placeholder="e.g. 46.5547"></label>
+            <label>Longitude: <input type="number" name="longitude" id="longitudeInput" step="any" placeholder="e.g. 15.6459"></label>
+            <button type="button" id="getLocationBtn">Get My Location</button>
+            <button type="button" id="pickFromMapBtn">Pick from Map</button>
+        </div>
     </form>
+    <div style="text-align:center; margin-top: 10px;">
+        <button onclick="window.location.href='/map'" style="padding: 10px 20px; font-size: 1em; cursor: pointer;">
+            View Coverage Map
+        </button>
+    </div>
+
+    <!-- Map Modal -->
+    <div id="locationMapModal">
+        <div id="locationMapContainer">
+            <h3>Click on the map to select location</h3>
+            <div id="locationPickerMap"></div>
+            <div id="mapCoords">No location selected</div>
+            <div class="modal-buttons">
+                <button id="cancelMapBtn">Cancel</button>
+                <button id="confirmMapBtn">Confirm Location</button>
+            </div>
+        </div>
+    </div>
+
     <div id="mainWrapper">
         <div class="half">
             <div id="canvasWrapper" style="display:none;">
@@ -66,6 +140,8 @@
             </div>
         </div>
     </div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
     const fileInput = document.getElementById('fileInput');
     const uploadedImage = document.getElementById('uploadedImage');
@@ -75,7 +151,73 @@
     const annotatedCanvas = document.getElementById('annotatedCanvas');
     const annotatedWrapper = document.getElementById('annotatedWrapper');
     const uploadForm = document.getElementById('uploadForm');
+    const latitudeInput = document.getElementById('latitudeInput');
+    const longitudeInput = document.getElementById('longitudeInput');
+    const getLocationBtn = document.getElementById('getLocationBtn');
+    const pickFromMapBtn = document.getElementById('pickFromMapBtn');
+    const locationMapModal = document.getElementById('locationMapModal');
+    const mapCoords = document.getElementById('mapCoords');
+    const cancelMapBtn = document.getElementById('cancelMapBtn');
+    const confirmMapBtn = document.getElementById('confirmMapBtn');
     let imageLoaded = false;
+    let pickerMap = null;
+    let pickerMarker = null;
+    let selectedLat = null;
+    let selectedLng = null;
+
+    getLocationBtn.onclick = function() {
+        if (navigator.geolocation) {
+            getLocationBtn.textContent = 'Getting location...';
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    latitudeInput.value = position.coords.latitude.toFixed(6);
+                    longitudeInput.value = position.coords.longitude.toFixed(6);
+                    getLocationBtn.textContent = 'Get My Location';
+                },
+                function(error) {
+                    alert('Unable to get location: ' + error.message);
+                    getLocationBtn.textContent = 'Get My Location';
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by your browser.');
+        }
+    };
+
+    pickFromMapBtn.onclick = function() {
+        locationMapModal.style.display = 'flex';
+        if (!pickerMap) {
+            pickerMap = L.map('locationPickerMap').setView([46.5547, 15.6459], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(pickerMap);
+
+            pickerMap.on('click', function(e) {
+                selectedLat = e.latlng.lat.toFixed(6);
+                selectedLng = e.latlng.lng.toFixed(6);
+                mapCoords.textContent = `Latitude: ${selectedLat}, Longitude: ${selectedLng}`;
+                if (pickerMarker) {
+                    pickerMarker.setLatLng(e.latlng);
+                } else {
+                    pickerMarker = L.marker(e.latlng).addTo(pickerMap);
+                }
+            });
+        }
+        setTimeout(() => pickerMap.invalidateSize(), 100);
+    };
+
+    cancelMapBtn.onclick = function() {
+        locationMapModal.style.display = 'none';
+    };
+
+    confirmMapBtn.onclick = function() {
+        if (selectedLat && selectedLng) {
+            latitudeInput.value = selectedLat;
+            longitudeInput.value = selectedLng;
+        }
+        locationMapModal.style.display = 'none';
+    };
 
     function setBothWrappersSize(width, height) {
         canvasWrapper.style.width = width + "px";
@@ -133,13 +275,17 @@
             ctx.clearRect(0, 0, annotatedCanvas.width, annotatedCanvas.height);
             if (result.holds) {
                 for (const hold of result.holds) {
-                    ctx.beginPath();
-                    ctx.arc(hold.position[0], hold.position[1], 8, 0, 2 * Math.PI);
-                    ctx.fillStyle = hold.is_selected ? "green" : "red";
-                    ctx.fill();
-                    ctx.strokeStyle = "#000";
+                    const x = hold.position[0];
+                    const y = hold.position[1];
+                    const w = hold.size ? hold.size[0] : 16;
+                    const h = hold.size ? hold.size[1] : 16;
+
+                    ctx.strokeStyle = hold.is_selected ? "green" : "red";
                     ctx.lineWidth = 2;
-                    ctx.stroke();
+                    ctx.strokeRect(x - w/2, y - h/2, w, h);
+
+                    ctx.fillStyle = hold.is_selected ? "rgba(0,255,0,0.2)" : "rgba(255,0,0,0.2)";
+                    ctx.fillRect(x - w/2, y - h/2, w, h);
                 }
             }
         }
